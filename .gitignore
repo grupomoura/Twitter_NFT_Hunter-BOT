@@ -1,0 +1,25 @@
+
+BOT default/BOT default.rar
+BOT default/profile/*.*
+*.db
+Chrome Install
+config.ini
+profile/wpp/
+chromedriver.exe
+db/data
+twitter_api.exe
+twitter_api_2.py
+BOT default/google-chrome-stable_current_amd64LINUX.deb
+main.exe
+*.log
+*.txt
+main.spec
+*.spec
+__pycache__
+build/*
+dist
+build/main/*.*
+modules/__pycache__
+LICENSE
+jupyter_notebook.bat
+twitter_api.ipynb

@@ -1,0 +1,30 @@
+[APP]
+# WALLET PARA RECEBER OS NFTS
+nft_wallet = YOUR_WALLET_ETH_HERE
+nft_wallet_wax = none 
+nft_wallet_sol = none 
+
+[DATABASE]
+# HEADTAG DE PESQUISA
+headtags = '#nftgiveaway'
+
+# PALAVRA CHAVE DA BUSCA
+palavras = 'giveaway wallet', 'giveaway address', 'drop wallet', 'drop address', '#solanagiveaway', '#waxgiveaway', '-filter:retweets', '-filter:replies'
+    
+# AMIGOS PARA MARCAR (5 no mínimo)
+friends_list = ['@friend1',
+    '@friend2',
+    '@friend3', 
+    '@friend4',
+    '@friend5',
+]
+
+[TWITTER]
+twitter_login = yourusertwitter
+consumer_key = yourAPIconsumer_key
+consumer_secret = yourAPIconsumer_secret
+access_token = yourAPIaccess_token
+access_token_secret = yourAPIaccess_token_secret
+Bearer_Token = yourAPIBearer_Token
+
+
