@@ -176,20 +176,22 @@ def follow_user(author):
     #Seguir usuário:
     try:
         ActionChains(driver).send_keys(Keys.HOME).perform()
+        print()
         time.sleep(2)
         menu_twitter = driver.find_element(by=By.XPATH, value=('//*[@aria-label="Mais"]'))
         menu_twitter.click()
         time.sleep(2)
         menu_item_text = driver.find_elements(by=By.XPATH, value=('//*[@role="menuitem"]'))[0].text 
         if 'Deixar' in menu_item_text:
-            print('Já segue esse contato! Encontrado no banco de dados!')  
+            print(f"Verificado! Já segue o contato {author}!")
             return
         driver.refresh()
         time.sleep(5)
         menu_twitter = driver.find_element(by=By.XPATH, value=('//*[@aria-label="Mais"]'))
         menu_twitter.click()
-        time.sleep(2)
         ActionChains(driver).send_keys(Keys.ENTER).perform()
+        print(f"Concluído! Contato {author} seguido!")
+        time.sleep(2)
     except:
         pass
 
@@ -198,7 +200,7 @@ def retwitt():
     try:
         retwitted = driver.find_element(by=By.XPATH, value=('//*[@aria-label="Retweetado"]')) 
         if retwitted:
-            logging.info('Encontrado Twitter ja retwittado!')
+            logging.info('Encontrado Twitter ja retwittado!') 
             return
     except:
         button_retwitt = driver.find_element(by=By.XPATH, value=('//*[@data-testid="retweet"]')) #Retwitt
@@ -206,6 +208,7 @@ def retwitt():
         time.sleep(2)
         #driver.find_element(by=By.XPATH, value=('//*[@data-testid="retweetConfirm"]')).click() #Retwitt confirma
         ActionChains(driver).send_keys(Keys.ENTER).perform()
+        print(f"🔁 Twitter retwittado!!")
         time.sleep(2)
 
 
@@ -213,20 +216,29 @@ def confirm_button():
     ActionChains(driver).send_keys(Keys.ARROW_DOWN).perform()
     ActionChains(driver).send_keys(Keys.ARROW_DOWN).perform()
     ActionChains(driver).send_keys(Keys.ARROW_DOWN).perform()
+    ActionChains(driver).send_keys(Keys.ARROW_DOWN).perform()
     time.sleep(2)
     try:
         try:
             driver.find_element(by=By.XPATH, value=('//*[@data-testid="tweetButtonInline"]')).click() # Confirmar Twitte
-            logging.info('Confirmado no primeiro button!')
+            if confere_comment():
+                logging.info('Confirmado no primeiro button!')
+            else:
+                confirm_button()
         except:
             ActionChains(driver).send_keys(Keys.ARROW_DOWN).perform()
             ActionChains(driver).send_keys(Keys.ARROW_DOWN).perform()
             ActionChains(driver).send_keys(Keys.ARROW_DOWN).perform() 
+            ActionChains(driver).send_keys(Keys.ARROW_DOWN).perform() 
             time.sleep(2)
-            driver.find_element(by=By.XPATH, value=('//*[@aria-label="Responder"]')).click()
-            logging.info('Confirmado no segundo button!')
+            driver.find_element(By.XPATH, "//span[text()='Responder']").click()
+            if confere_comment():
+                logging.info('Confirmado no segundo button!')
+            else:
+                print('⛔ Imporsível confirmar essa postagem!')
     except:
         logging.warning('Erro ao tentar confirmar a postagem!')
+        print('⛔ Erro ao tentar confirmar a postagem!')
         pass
 
 
@@ -243,8 +255,9 @@ def comment(random_friends, text_twitter, url):
     ActionChains(driver).send_keys(Keys.ARROW_DOWN).perform()
     ActionChains(driver).send_keys(Keys.ARROW_DOWN).perform()
     if confere_comment():
-        print('Postagem já foi comentada!')
-        return
+        print(f"✅ Verificado! Twitter já comentado!!")
+        return False
+    
     text_box = driver.find_element(by=By.XPATH, value=('//*[@class="public-DraftStyleDefault-block public-DraftStyleDefault-ltr"]'))
     time.sleep(1)
     text_box.click()
@@ -273,6 +286,8 @@ def comment(random_friends, text_twitter, url):
         logging.info('Campanha ETH executada!')
 
     confirm_button()
+    print(f"💬 Twitter comentado!!")
+    return True
 
 
 def like():
@@ -280,8 +295,10 @@ def like():
         liked = driver.find_element(by=By.XPATH, value=('//*[@data-testid="unlike"]'))
         if liked:
             logging.info('Encontrado Twitter ja curtido!')
+            print(f"✅ Verificado! Twitter já curtido!!")
             return
     except:
+        print(f"❤️ Twitter curtido!!")
         like = driver.find_element(by=By.XPATH, value=('//*[@aria-label="Curtir"]')) #Like
         if not like:
             return
@@ -313,7 +330,7 @@ def main():
 
     print(logo_img)
 
-    loading('Iniciando o processo..', 'Processo iniciado!', times=5)
+    loading('🤖 Iniciando o processo..', '🤖 Processo iniciado!', times=5)
 
     # Atualizando banco de dados..
     del_dbdata_7antes()
@@ -324,25 +341,30 @@ def main():
             for i, twitt in enumerate(twitt_confirm):
                 print('#'*80)
                 text_twitter = twitt['Tweet']
-       
+        
                 random_friends = selectRandom(friends)
                 url = twitt['Url_post']
                 driver.get(twitt['Url_post'])
-                loading(f'Acessando link {i+1}: {url}',url, times=5)
+                print()
+                loading(f'Acessando link {i+1}: {url}',f'Link: [{i+1}/{len(twitt_confirm)}] {url}', times=5)
+                print()
                 try:
                     like()    
                     retwitt() 
-                    comment(random_friends, text_twitter, twitt['Url_post'])
-                    time.sleep(2)
-                    follow_user(twitt['User_post'])    
-                    posts += 1
-                    print(f'{posts} executada(s) com sucesso!\n')
-                    logging.info(f'{posts} campanha(s) executada(s) com sucesso!')
-                    if i+1 < len(twitt_confirm):
-                        loading('Aguardando próxima postagem..', 'Iniciando nova postagem..', times=300) # 300
+                    if comment(random_friends, text_twitter, twitt['Url_post']):
+                        time.sleep(2)
+                        follow_user(twitt['User_post'])    
+                        posts += 1
+                        print(f'✅ {posts} executada(s) com sucesso!\n')
+                        logging.info(f'{posts} campanha(s) executada(s) com sucesso!')
+                        if i+1 < len(twitt_confirm):
+                            loading('🕐 Aguardando próxima postagem..', '🤖 Iniciando nova postagem..', times=300) # 300
+                            print()
+                    else:
+                        time.sleep(60)
                 except:
-                    time.sleep(30)
-            loading('Aguardando nova consulta..', 'Iniciando nova consulta..', times=1200)
+                    time.sleep(60)
+            loading('🕐 Aguardando nova consulta..', '🤖 Iniciando nova consulta..', times=1800)
             delete_cache_driver()
 
 
