@@ -31,6 +31,7 @@ def response_home_timeline():
                             'Id_post': twitt.retweeted_status.id_str,
                             'Tweet':  twitt.retweeted_status.full_text,
                             'Id_user': twitt.retweeted_status.author.id_str,
+                            'followers_count': twitt.retweeted_status.user.followers_count,
                             'User_post': twitt.retweeted_status.author.screen_name,
                             'Url_post': f"https://twitter.com/{twitt.retweeted_status.author.screen_name}/status/{twitt.retweeted_status.id_str}"
                             }
@@ -41,6 +42,7 @@ def response_home_timeline():
                         'Id_post': twitt.id_str,
                         'Tweet':  twitt.full_text,
                         'Id_user': twitt.author.id_str,
+                        'followers_count': twitt.user.followers_count,
                         'User_post': twitt.author.screen_name,
                         'Url_post': f"https://twitter.com/{twitt.author.screen_name}/status/{twitt.id_str}"
                     }

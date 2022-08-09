@@ -7,8 +7,10 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
+from selenium.common import exceptions as driver_except
 from webdriver_manager.chrome import ChromeDriverManager
-from modules.db import insert_db, consult_db, consult_db_twitter_id, del_dbdata_7antes
+from modules.db import insert_db, consult_db, consult_db_twitter_id, del_dbdata_7antes, insert_db_freemint
+from modules.datetime_calculator import getDifference
 # from modules.telegrambots import telegram_msg, telegram_img
 from modules.ini_config import config
 from modules.loading import Loader
@@ -42,7 +44,9 @@ options.add_argument("disable-infobars")
 options.add_argument("disable-gpu")
 options.add_argument("log-level=3")
 options.add_argument(r"user-data-dir={}".format(profile))
-driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+driver = webdriver.Chrome('chromedriver.exe', options=options)
+# driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+    
 
 # Variáveis diversas
 friends = literal_eval(config['DATABASE']['friends_list'])
@@ -50,7 +54,13 @@ keywords = literal_eval(config['DATABASE']['palavras'])
 nft_wallet = config['APP']['nft_wallet']
 nft_wallet_wax = config['APP']['nft_wallet_wax']
 nft_wallet_sol = config['APP']['nft_wallet_sol']
+followers_count = int(config['APP']['followers_count'])
 twitter_login = config['TWITTER']['twitter_login']
+
+temp_post = int(config['TIMERS']['tempo_post'])
+temp_consulta = int(config['TIMERS']['tempo_consulta'])
+
+
 followings = []
 twitters = {}
 counts = 0
@@ -92,9 +102,9 @@ def delete_cache_driver():
         shutil.rmtree(Cache)
         shutil.rmtree(Code_Cache)
     except OSError as e:
-        print(e)
+        pass
     else:
-        print("Cache chrome liberado com successo")
+        logging.info(f'Cache chrome liberado com sucesso!')
 
 
 def selectRandom(names, num=5):
@@ -105,15 +115,13 @@ def insert_db_teste(twitt):
     if consult_db_twitter_id(twitt["Id_post"]):
         return False
     try:
-        insert_db(twitt["Tweet"], twitt["User_post"], twitt["Id_post"])
+        insert_db(f'{twitt["Tweet"]} {twitt["Url_post"]}', twitt["User_post"], twitt["Id_post"])
     except sqlite3.IntegrityError as e:                             
-        print('Twitter cancelado, encontrado no banco de dados!') 
         return False 
     except IndexError:
         try:
-            insert_db(twitt['Tweet'].split(':')[0].split('http')[0].strip())
+            insert_db(twitt['Tweet'].split(':')[0].split('http')[0].strip(), twitt["User_post"], twitt["Id_post"])
         except sqlite3.IntegrityError as e:
-            print('Twitter cancelado, encontrado no banco de dados!') 
             return False
     return True
 
@@ -138,31 +146,42 @@ def twitters_tratamento():
     
     twitters = list(twitters_home_timeline.values()) + list(twitters_index.values())
     
-    print(f'\n{len(twitters)} links indexados!\n')
-    logging.info(f'{len(twitters)} links indexados!')
+    print(f'\n{len(twitters)} Postagens indexadas!\n')
+    logging.info(f'{len(twitters)} Postagens indexadas!')
 
     print('#'*80)
-
+    print()
+    cancelado_db = 0 
+    
     for twitt in twitters:
-        if 'free mint' in twitt['Tweet'].lower() or 'freemint' in twitt['Tweet'].lower():
-            logging.info(f"Free mint em: {twitt['Url_post']}")
-            with open("free_mint.txt", "w") as save:
-                save.write(f"Free mint em: {twitt['Url_post']}\n")
-        elif 'wallet' in twitt['Tweet'].lower() or 'address' in twitt['Tweet'].lower() and not 'congrats' in twitt['Tweet'].lower():
+        if 'free mint' in twitt['Tweet'].lower() or 'freemint' in twitt['Tweet'].lower() or 'premint' in twitt['Tweet'].lower():
+            try:
+                if int(twitt['followers_count']) >= followers_count:
+                    insert_db_freemint(twitt['Tweet'], twitt['Url_post'], twitt['followers_count'])
+                    logging.info(f"Free mint em: {twitt['Url_post']}")
+                    print(f"\n💡 Free mint em: {twitt['Url_post']}\n")
+            except:
+                pass
+        elif int(twitt['followers_count']) < followers_count:
+            cancelado_db += 1
+        elif 'wallet' in twitt['Tweet'].lower() or 'address' in twitt['Tweet'].lower() and not 'congrat' in twitt['Tweet'].lower():
             if twitt not in twitt_confirm:
                 insert = insert_db_teste(twitt)
                 if insert and 'giv' in twitt['Tweet'].lower() or 'drop' in twitt['Tweet'].lower():
                     twitt_confirm.append(twitt)
-        else:
-            twitt_reject.append(twitt)
-        
+                else:
+                    if not insert: 
+                        cancelado_db += 1
+    if cancelado_db > 0:
+        print(f'❎ {cancelado_db} campanha(s) descartada(s)!')
+
     if len(twitt_confirm):
         print(f'\n{len(twitt_confirm)} twitters selecionados!\n')
         logging.info(f'{len(twitt_confirm)} twitters selecionados!')
 
         return twitt_confirm
     else:
-        print('\nNenhuma postagem em potencial no momento\nAguardando nova consulta..')
+        print('\nNenhuma postagem em potencial no momento\n')
 
 
 def follow_user(author):
@@ -190,7 +209,7 @@ def follow_user(author):
         menu_twitter = driver.find_element(by=By.XPATH, value=('//*[@aria-label="Mais"]'))
         menu_twitter.click()
         ActionChains(driver).send_keys(Keys.ENTER).perform()
-        print(f"Concluído! Contato {author} seguido!")
+        print(f"✅ Concluído! Contato {author} seguido!")
         time.sleep(2)
     except:
         pass
@@ -198,9 +217,17 @@ def follow_user(author):
 
 def retwitt():
     try:
+        text_box = driver.find_element(by=By.XPATH, value=('//*[@class="public-DraftStyleDefault-block public-DraftStyleDefault-ltr"]'))
+    except:
+        text_box = driver.find_element(by=By.XPATH, value=('//*[@aria-label="Texto do Tweet"]'))
+    
+    if not text_box:
+        return 
+    try:
         retwitted = driver.find_element(by=By.XPATH, value=('//*[@aria-label="Retweetado"]')) 
         if retwitted:
             logging.info('Encontrado Twitter ja retwittado!') 
+            print(f"✅ Verificado! Twitter já retwittado!!")
             return
     except:
         button_retwitt = driver.find_element(by=By.XPATH, value=('//*[@data-testid="retweet"]')) #Retwitt
@@ -258,13 +285,21 @@ def comment(random_friends, text_twitter, url):
         print(f"✅ Verificado! Twitter já comentado!!")
         return False
     
-    text_box = driver.find_element(by=By.XPATH, value=('//*[@class="public-DraftStyleDefault-block public-DraftStyleDefault-ltr"]'))
+    try:
+        text_box = driver.find_element(by=By.XPATH, value=('//*[@class="public-DraftStyleDefault-block public-DraftStyleDefault-ltr"]'))
+    except:
+        text_box = driver.find_element(by=By.XPATH, value=('//*[@aria-label="Texto do Tweet"]'))
+        
+    if not text_box:
+        return False
     time.sleep(1)
     text_box.click()
     if 'tag' in text_twitter.lower():
         for friend in random_friends:
             time.sleep(1)
             text_box.send_keys(f'{friend}, ')
+    # else:
+    #     text_box.send_keys(f'{random_friends[0]}, ')
 
     if 'eth' in text_twitter.lower():  
         text_box.send_keys(nft_wallet)
@@ -298,28 +333,19 @@ def like():
             print(f"✅ Verificado! Twitter já curtido!!")
             return
     except:
-        print(f"❤️ Twitter curtido!!")
         like = driver.find_element(by=By.XPATH, value=('//*[@aria-label="Curtir"]')) #Like
         if not like:
             return
         like.click()
+        print(f"❤️ Twitter curtido!!")
         time.sleep(2)    
-
-
-def tratar_texto():
-    new_twitts = []
-    twitters_db = consult_db() 
-    for t in twitters_db:
-        try:
-            tw = t[1].split(':')[1].split('http')[0].strip()
-            insert_db(tw)
-        except:
-            continue
 
 
 def main():
     num_twitters_run = 0
     posts = 0
+
+    initial_time = datetime.datetime.now()
 
     logging.basicConfig(
         level=logging.INFO,
@@ -344,10 +370,9 @@ def main():
         
                 random_friends = selectRandom(friends)
                 url = twitt['Url_post']
+                print(f'\nAcessando link [{i+1}/{len(twitt_confirm)}] {url}\n')
                 driver.get(twitt['Url_post'])
-                print()
-                loading(f'Acessando link {i+1}: {url}',f'Link: [{i+1}/{len(twitt_confirm)}] {url}', times=5)
-                print()
+                time.sleep(5)
                 try:
                     like()    
                     retwitt() 
@@ -355,16 +380,30 @@ def main():
                         time.sleep(2)
                         follow_user(twitt['User_post'])    
                         posts += 1
-                        print(f'✅ {posts} executada(s) com sucesso!\n')
+                        
+                        minutos = getDifference(then=initial_time)
+                        if minutos >= 1 and minutos > 59: # >= 1 porque o valor antes de 1min é negativo
+                            if minutos >= 59:
+                                minutos = minutos % 60
+                            horas = getDifference(then=initial_time, interval="hrs")
+                            print(f'✅ {posts} executada(s) com sucesso nas últimas {horas} hora(s) e {minutos} minuto(s)!\n')
+                        elif minutos < 1:
+                            segundos = getDifference(then=initial_time, interval="secs")
+                            print(f'✅ {posts} executada(s) com sucesso nos últimos {segundos} segundos!\n')
+                        else:
+                            print(f'✅ {posts} executada(s) com sucesso nos últimos {minutos} minuto(s)!\n')
+                        
                         logging.info(f'{posts} campanha(s) executada(s) com sucesso!')
                         if i+1 < len(twitt_confirm):
-                            loading('🕐 Aguardando próxima postagem..', '🤖 Iniciando nova postagem..', times=300) # 300
+                            loading('🕐 Aguardando próxima postagem..', '🤖 Iniciando nova postagem..', times=temp_post) # 300
                             print()
                     else:
+                        print(f'❎ Esta postagem foi descartada!\n')
                         time.sleep(60)
                 except:
+                    print(f'❎ Esta postagem foi descartada!\n')
                     time.sleep(60)
-            loading('🕐 Aguardando nova consulta..', '🤖 Iniciando nova consulta..', times=1800)
+            loading('🕐 Aguardando nova consulta..', '🤖 Iniciando nova consulta..', times=temp_consulta)
             delete_cache_driver()
 
 

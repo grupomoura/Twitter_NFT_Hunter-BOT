@@ -4,20 +4,29 @@ nft_wallet = YOUR_WALLET_ETH_HERE
 nft_wallet_wax = none 
 nft_wallet_sol = none 
 
+# Número mínimo de seguidores do perfil da campanha
+followers_count = 200  
+
 [DATABASE]
-# HEADTAG DE PESQUISA
+# PESQUISA PRINCIPAL
 headtags = '#nftgiveaway'
 
-# PALAVRA CHAVE DA BUSCA
+# PALAVRAS CHAVE DA BUSCA
 palavras = 'giveaway wallet', 'giveaway address', 'drop wallet', 'drop address', '#solanagiveaway', '#waxgiveaway', '-filter:retweets', '-filter:replies'
     
-# AMIGOS PARA MARCAR (5 no mínimo)
+# NO MÍNIMO 5 AMIGOS PARA MARCAR
 friends_list = ['@friend1',
     '@friend2',
     '@friend3', 
     '@friend4',
     '@friend5',
 ]
+
+[TIMERS]
+# tempo_post: Intervalo em segs entre cada postagens
+# tempo_consulta: Intervalo em segs entre as consultas API
+tempo_post = 300
+tempo_consulta = 1800
 
 [TWITTER]
 twitter_login = yourusertwitter

@@ -12,6 +12,11 @@ def insert_db(twitters, following, twitterId):
     con.commit()
 
 
+def insert_db_freemint(twitters, freemint_link, followers_count):
+    cur.execute("INSERT into freemint (twitters, freemint_link, followers_count) values (?,?,?)", (twitters, freemint_link, followers_count))
+    con.commit()
+
+
 def insert_db_follow(value):
     cur.execute("INSERT into posts_twitter (following) values (?)", (value,))
 
@@ -93,9 +98,9 @@ DELETE
 """
 CREATE TABLE posts_twitter(
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    twitters TEXT,
+    twitters TEXT UNIQUE,
     "following" TEXT,
-    twitterId TEXT, 
+    twitterId TEXT UNIQUE, 
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 """
