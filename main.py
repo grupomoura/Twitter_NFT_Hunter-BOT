@@ -111,11 +111,32 @@ def selectRandom(names, num=5):
   return numpy.random.choice(names, num, False)
 
 
+def getUrl(twitt):
+    import re 
+    REGEX = r"(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))\)|[^\s`!()\[\]{};:'\".,<>?«»“”‘’]))"
+    return re.findall(REGEX, twitt)   
+
+
+def findUrls(twitt):
+    try: 
+        url = getUrl(twitt)   
+        urls = [x[0] for x in url] 
+
+        twitt_no_link = twitt
+        for url in urls:
+            twitt_no_link = twitt_no_link.replace(url, '').strip()
+        return twitt_no_link
+    except:
+        pass
+        
+
 def insert_db_teste(twitt):
+
     if consult_db_twitter_id(twitt["Id_post"]):
         return False
     try:
-        insert_db(f'{twitt["Tweet"]} {twitt["Url_post"]}', twitt["User_post"], twitt["Id_post"])
+        twitt_text = findUrls(twitt["Tweet"])
+        insert_db(twitt_text, twitt["User_post"], twitt["Id_post"])
     except sqlite3.IntegrityError as e:                             
         return False 
     except IndexError:
@@ -123,6 +144,11 @@ def insert_db_teste(twitt):
             insert_db(twitt['Tweet'].split(':')[0].split('http')[0].strip(), twitt["User_post"], twitt["Id_post"])
         except sqlite3.IntegrityError as e:
             return False
+        except IndexError:
+            try: 
+                insert_db(twitt['Tweet'], twitt["User_post"], twitt["Id_post"])
+            except:
+                return False
     return True
 
 
@@ -244,7 +270,7 @@ def confirm_button():
     ActionChains(driver).send_keys(Keys.ARROW_DOWN).perform()
     ActionChains(driver).send_keys(Keys.ARROW_DOWN).perform()
     ActionChains(driver).send_keys(Keys.ARROW_DOWN).perform()
-    time.sleep(2)
+    time.sleep(4)
     try:
         try:
             driver.find_element(by=By.XPATH, value=('//*[@data-testid="tweetButtonInline"]')).click() # Confirmar Twitte
@@ -253,16 +279,21 @@ def confirm_button():
             else:
                 confirm_button()
         except:
-            ActionChains(driver).send_keys(Keys.ARROW_DOWN).perform()
-            ActionChains(driver).send_keys(Keys.ARROW_DOWN).perform()
-            ActionChains(driver).send_keys(Keys.ARROW_DOWN).perform() 
-            ActionChains(driver).send_keys(Keys.ARROW_DOWN).perform() 
-            time.sleep(2)
-            driver.find_element(By.XPATH, "//span[text()='Responder']").click()
-            if confere_comment():
-                logging.info('Confirmado no segundo button!')
-            else:
-                print('⛔ Imporsível confirmar essa postagem!')
+            try:
+                ja_disse = driver.find_element(by=By.XPATH, value=('//*[@aria-live="assertive"]')).text
+                if ja_disse == 'Opa! Você já disse isso.':
+                    print(f"🆗 Verificado! Twitter já comentado!!")
+            except:
+                ActionChains(driver).send_keys(Keys.ARROW_DOWN).perform()
+                ActionChains(driver).send_keys(Keys.ARROW_DOWN).perform()
+                ActionChains(driver).send_keys(Keys.ARROW_DOWN).perform() 
+                ActionChains(driver).send_keys(Keys.ARROW_DOWN).perform() 
+                time.sleep(4)
+                driver.find_element(By.XPATH, "//span[text()='Responder']").click()
+                if confere_comment():
+                    logging.info('Confirmado no segundo button!')
+                else:
+                    print('⛔ Imporsível confirmar essa postagem!')
     except:
         logging.warning('Erro ao tentar confirmar a postagem!')
         print('⛔ Erro ao tentar confirmar a postagem!')
@@ -303,25 +334,30 @@ def comment(random_friends, text_twitter, url):
 
     if 'eth' in text_twitter.lower():  
         text_box.send_keys(nft_wallet)
+        wallet_comment = 'ETH'
         # logging.info('Campanha ETH executada!')
     elif 'wax' in text_twitter.lower():  
         if nft_wallet_wax == 'none':
             logging.info('Campanha WAX perdida! Adicione uma wallet WAX!')
         else:
             text_box.send_keys(nft_wallet_wax) 
-            logging.info('Campanha WAX executada!')
+            wallet_comment = 'WAX'
     elif 'solana' in text_twitter.lower() or '$sol' in text_twitter.lower():
         if nft_wallet_sol == 'none':
             logging.info('Campanha SOLANA perdida! Adicione uma wallet SOLANA!')
         else:
             text_box.send_keys(nft_wallet_sol)
-            logging.info('Campanha SOLANA executada!')
+            wallet_comment = 'SOLANA'
+    elif 'l2 wallet' in text_twitter.lower() or 'loopring' in text_twitter.lower():
+        text_box.send_keys(nft_wallet)
+        wallet_comment = 'LOOPRING'
     else:
         text_box.send_keys(nft_wallet)
-        logging.info('Campanha ETH executada!')
+        wallet_comment = 'WALLET'
 
     confirm_button()
-    print(f"💬 Twitter comentado!!")
+    logging.info(f'Campanha {wallet_comment} executada!')
+    print(f"💬 Twitter {wallet_comment} comentado!!")
     return True
 
 
@@ -405,6 +441,8 @@ def main():
                     time.sleep(60)
             loading('🕐 Aguardando nova consulta..', '🤖 Iniciando nova consulta..', times=temp_consulta)
             delete_cache_driver()
+        else:
+            loading('🕐 Aguardando nova consulta..', '🤖 Iniciando nova consulta..', times=temp_consulta)
 
 
 main()

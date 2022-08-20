@@ -30,7 +30,7 @@ ts = TwitterSearch(
 # Config de busca de postagens 
 tso = TwitterSearchOrder()
 tso.set_keywords(keywords, or_operator=True) #'PolygonNFT', 'FreeNFT','NFTGiveaway', 'NFTGiveaways', 'NFTdrop', 'NFTcollections', 'nftcollector', 'NFTdrop'    '-filter:retweets'  '-filter:replies'
-tso.add_keyword(literal_eval(config['DATABASE']['headtags']))
+# tso.add_keyword(literal_eval(config['DATABASE']['headtags']))
 # tso.set_language('en')
 tso.set_since(four_days_ago)
 tso.set_include_entities(False)
